@@ -107,10 +107,7 @@ final class Bridge {
         let request = URLRequest(url: i.base.appendingPathComponent("v1/identity").appendingQuery("nonce", nonce))
         guard let data = try? await send(request), let identity = try? decoder.decode(Identity.self, from: data),
               identity.instanceId == i.instanceId else { return false }
-        // Token is the manifest's ASCII hex string, not hex-decoded bytes.
-        let expected = HMAC<SHA256>.authenticationCode(for: Data("\(nonce):\(i.instanceId)".utf8), using: SymmetricKey(data: Data(i.token.utf8)))
-        guard let proof = Data(hex: identity.proof), proof.count == expected.count else { return false }
-        return zip(proof, expected).reduce(UInt8(0)) { $0 | ($1.0 ^ $1.1) } == 0
+        return identityProofIsValid(identity.proof, token: i.token, nonce: nonce, instanceId: i.instanceId)
     }
     func open(_ target: LinkTarget, instance i: Instance) async throws {
         guard await authenticate(i) else { throw BridgeError.message("Plugin identity changed; request not sent.") }
@@ -138,6 +135,16 @@ final class Bridge {
         }
         throw BridgeError.message("DSH did not confirm navigation within 30 seconds. It may still finish; check DSH before retrying.")
     }
+}
+
+// Internal for deterministic cross-language protocol tests; never logs the token.
+func identityProofIsValid(_ hexProof: String, token: String, nonce: String, instanceId: String) -> Bool {
+    // Token is the manifest's ASCII hex string, not hex-decoded bytes.
+    let expected = Data(HMAC<SHA256>.authenticationCode(
+        for: Data("\(nonce):\(instanceId)".utf8),
+        using: SymmetricKey(data: Data(token.utf8))))
+    guard let proof = Data(hex: hexProof), proof.count == expected.count else { return false }
+    return zip(proof, expected).reduce(UInt8(0)) { $0 | ($1.0 ^ $1.1) } == 0
 }
 
 private final class NoRedirect: NSObject, URLSessionTaskDelegate {

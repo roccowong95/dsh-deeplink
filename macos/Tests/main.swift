@@ -16,3 +16,15 @@ for bad in [
     "dsh-link://session/" + String(repeating: "a", count: 129)
 ] { check(bad, valid: false) }
 print("LinkTarget parser tests passed")
+
+// Fixture generated independently with Node crypto.createHmac('sha256', token).
+let token = String(repeating: "a", count: 64)
+let nonce = "0123456789abcdef0123456789abcdef"
+let instanceId = "550e8400-e29b-41d4-a716-446655440000"
+let proof = "27e98d7b632e9a31f3abf0e29c7b675f641d1aa85faf14fac3ca26644d0946f3"
+precondition(identityProofIsValid(proof, token: token, nonce: nonce, instanceId: instanceId))
+precondition(!identityProofIsValid(proof, token: String(repeating: "b", count: 64), nonce: nonce, instanceId: instanceId))
+precondition(!identityProofIsValid(proof, token: token, nonce: String(repeating: "0", count: 32), instanceId: instanceId))
+precondition(!identityProofIsValid(String(repeating: "0", count: 64), token: token, nonce: nonce, instanceId: instanceId))
+precondition(!identityProofIsValid("invalid", token: token, nonce: nonce, instanceId: instanceId))
+print("HMAC identity proof tests passed")
