@@ -1,0 +1,18 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { openRequest, runClient } from '../lib/navigation.js';
+function fixture(){
+ const nav=new AbortController();let opens=[],releases=0;
+ const ctx={layout:{beginNavigation:()=>nav.signal,panelInfo:{getSnapshot:()=>({activePanelId:null})}},sessions:{retainInfo:()=>({getSnapshot:()=>({retainedBy:{mainView:opens.includes('abc')?1:0}})}),refresh:async()=>{},list:{getSnapshot:()=>({ids:['abc'],byId:{abc:{}}})},retain:()=>({ready:Promise.resolve({}),release:()=>releases++})},workspaces:{list:{getSnapshot:()=>({archivedSessionIds:[]})}},uiWorkspace:{openSession:id=>opens.push(id)}};
+ return{ctx,nav,opens,get releases(){return releases;}};
+}
+const request=()=>({requestId:'id',sessionId:'abc',deadline:Date.now()+30000});
+test('loads target before navigation, releases owned reference, no mutation',async()=>{const f=fixture();assert.equal((await openRequest(f.ctx,request(),new AbortController().signal)).status,'opened');assert.deepEqual(f.opens,['abc']);assert.equal(f.releases,1);});
+test('archived and missing target never open or unarchive',async()=>{const f=fixture();f.ctx.workspaces.list.getSnapshot=()=>({archivedSessionIds:['abc']});await assert.rejects(openRequest(f.ctx,request(),new AbortController().signal),/archived/);assert.equal(f.opens.length,0);f.ctx.workspaces.list.getSnapshot=()=>({archivedSessionIds:[]});f.ctx.sessions.list.getSnapshot=()=>({ids:[],byId:{},phase:'ready'});await assert.rejects(openRequest(f.ctx,request(),new AbortController().signal),/not-found/);});
+test('later user navigation cancels async preload without stealing focus',async()=>{const f=fixture();let ready;f.ctx.sessions.retain=()=>({ready:new Promise(r=>ready=r),release:()=>{}});const pending=openRequest(f.ctx,request(),new AbortController().signal);await new Promise(resolve=>setImmediate(resolve));f.nav.abort();ready({});await assert.rejects(pending,{name:'AbortError'});assert.deepEqual(f.opens,[]);});
+test('session removed during preload is refused',async()=>{const f=fixture();f.ctx.sessions.retain=()=>({ready:Promise.resolve().then(()=>{f.ctx.sessions.list.getSnapshot=()=>({ids:[],byId:{}})}),release:()=>{}});await assert.rejects(openRequest(f.ctx,request(),new AbortController().signal),/not-found/);assert.deepEqual(f.opens,[]);});
+test('polling uses existing /api RPC and acknowledgement only after successful navigation',async()=>{const f=fixture(),calls=[];let acked;const complete=new Promise(r=>acked=r);f.ctx.connection={rpc:{call:async(...args)=>{calls.push(args);if(args[1]==='deeplink/claim')return{ok:true,value:request()};acked();return{ok:true,value:{}};}}};const stop=runClient(f.ctx,{interval:10000});await complete;stop();assert.equal(calls[0][0],'/api');assert.equal(calls[1][2].args.status,'opened');assert.deepEqual(f.opens,['abc']);});
+
+test('hung refresh cancels promptly and does not block navigation loop',async()=>{const f=fixture();f.ctx.sessions.refresh=()=>new Promise(()=>{});const lifetime=new AbortController();const result=openRequest(f.ctx,request(),lifetime.signal);lifetime.abort();await assert.rejects(result,{name:'AbortError'});assert.deepEqual(f.opens,[]);});
+test('refused known target does not supersede a user navigation',async()=>{const f=fixture();f.ctx.sessions.list.getSnapshot=()=>({ids:[],byId:{},phase:'ready'});f.ctx.layout.beginNavigation=()=>{throw new Error('must-not-navigate')};await assert.rejects(openRequest(f.ctx,request(),new AbortController().signal),/session-not-found/);});
+test('silent navigation rejection cannot report opened',async()=>{const f=fixture();f.ctx.uiWorkspace.openSession=()=>{};await assert.rejects(openRequest(f.ctx,request(),new AbortController().signal),/navigation-not-selected/);});
