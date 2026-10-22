@@ -1,0 +1,54 @@
+name: macOS checks and ad-hoc build
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Record toolchain
+        run: |
+          sw_vers
+          xcode-select -p
+          xcodebuild -version
+          xcrun swiftc --version
+          node --version
+          npm --version
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Test plugin
+        run: npm test
+      - name: Test Swift URL parser
+        run: bash macos/test.sh
+      - name: Build and verify ad-hoc universal package
+        run: |
+          chmod +x macos/build.sh macos/release.sh
+          bash macos/release.sh universal
+      # CI artifact only: no GitHub Release, publishing token, or Apple credentials.
+      - name: Upload ad-hoc package and checksum
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: DSH-Deeplink-macos-universal-adhoc-${{ github.sha }}
+          path: |
+            macos/build/DSH-Deeplink-*-universal-adhoc.zip
+            macos/build/DSH-Deeplink-*-universal-adhoc.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
