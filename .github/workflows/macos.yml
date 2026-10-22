@@ -36,7 +36,7 @@ jobs:
         run: npm ci
       - name: Test plugin
         run: npm test
-      - name: Test Swift URL parser
+      - name: Test Swift URL parser and identity authentication
         run: bash macos/test.sh
       - name: Build and verify ad-hoc universal package
         run: |
