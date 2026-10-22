@@ -9,7 +9,7 @@ APP="$OUT/DSH Deeplink.app"
 mkdir -p "$APP/Contents/MacOS"
 cp Info.plist "$APP/Contents/Info.plist"
 SDK=$(xcrun --sdk macosx --show-sdk-path)
-compile() { xcrun swiftc -O -swift-version 5 -sdk "$SDK" -target "$1-apple-macos12.0" -framework AppKit -framework CryptoKit Sources/Protocol.swift Sources/main.swift -o "$OUT/DSHDeeplink-$1"; }
+compile() { xcrun swiftc -O -parse-as-library -swift-version 5 -sdk "$SDK" -target "$1-apple-macos12.0" -framework AppKit -framework CryptoKit Sources/Protocol.swift Sources/main.swift -o "$OUT/DSHDeeplink-$1"; }
 if [[ "$ARCH" == universal ]]; then
   compile arm64; compile x86_64
   lipo -create "$OUT/DSHDeeplink-arm64" "$OUT/DSHDeeplink-x86_64" -output "$APP/Contents/MacOS/DSHDeeplink"
