@@ -1,4 +1,5 @@
 import AppKit
+import UniformTypeIdentifiers
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -73,7 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.title = "Choose the DSH Desktop application"
         panel.message = "Choose your trusted official DSH Desktop app. This helper never downloads or installs DSH."
         panel.canChooseDirectories = false; panel.canChooseFiles = true; panel.allowsMultipleSelection = false
-        panel.allowedFileTypes = ["app"]
+        panel.allowedContentTypes = [.applicationBundle]
         NSApp.activate(ignoringOtherApps: true)
         if panel.runModal() == .OK, let url = panel.url, Bundle(url: url)?.bundleIdentifier != nil {
             UserDefaults.standard.set(url.path, forKey: "DSHApplicationPath")
@@ -99,8 +100,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func quit() { work?.cancel(); bridge.cancel(); NSApp.terminate(nil) }
     func applicationWillTerminate(_ notification: Notification) { work?.cancel(); bridge.cancel() }
 }
-let app = NSApplication.shared
-let delegate = AppDelegate()
-app.delegate = delegate
-app.setActivationPolicy(.accessory)
-app.run()
+@main
+struct DSHDeeplinkApplication {
+    @MainActor
+    static func main() {
+        let app = NSApplication.shared
+        let delegate = AppDelegate()
+        app.delegate = delegate
+        app.setActivationPolicy(.accessory)
+        withExtendedLifetime(delegate) { app.run() }
+    }
+}
