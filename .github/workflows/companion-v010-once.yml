@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: 99bd398906946e2bdc62814e751aa33ee9cf9d20
+          ref: 54319a294e63a263724465c1167a179c342fcdf5
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -29,7 +29,7 @@ jobs:
         env:
           RELEASE_TAG: companion-v0.1.0
         run: |
-          test "$(git rev-parse HEAD)" = '99bd398906946e2bdc62814e751aa33ee9cf9d20'
+          test "$(git rev-parse HEAD)" = '54319a294e63a263724465c1167a179c342fcdf5'
           VERSION=$(node scripts/release-version.mjs companion "$RELEASE_TAG")
           test "$VERSION" = '0.1.0'
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
@@ -42,7 +42,7 @@ jobs:
           APP='macos/build/universal/DSH Deeplink.app'
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")" = "$COMPANION_VERSION"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Contents/Info.plist")" = "$COMPANION_VERSION"
-          lipo -verify_arch arm64 x86_64 "$APP/Contents/MacOS/DSHDeeplink"
+          lipo "$APP/Contents/MacOS/DSHDeeplink" -verify_arch arm64 x86_64
           codesign --verify --strict "$APP"
           cd macos/build
           shasum -a 256 -c "DSH-Deeplink-$COMPANION_VERSION-universal-adhoc.zip.sha256"
@@ -72,7 +72,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: roccowong95/dsh-deeplink
-          TARGET: 99bd398906946e2bdc62814e751aa33ee9cf9d20
+          TARGET: 54319a294e63a263724465c1167a179c342fcdf5
           RELEASE_TAG: companion-v0.1.0
         shell: bash
         run: |
