@@ -1,0 +1,100 @@
+name: One-off plugin v0.1.2 release
+
+on:
+  push:
+    branches: ['release/v0.1.2']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: one-off-plugin-v0.1.2
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.repository == 'roccowong95/dsh-deeplink' && github.ref == 'refs/heads/release/v0.1.2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 99bd398906946e2bdc62814e751aa33ee9cf9d20
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Verify exact source and release version
+        run: |
+          test "$(git rev-parse HEAD)" = '99bd398906946e2bdc62814e751aa33ee9cf9d20'
+          node scripts/release-version.mjs plugin v0.1.2
+      - run: npm ci
+      - run: npm test
+      - name: Verify committed client build
+        run: git diff --exit-code -- lib
+      - run: npm run test:install
+      - name: Pack and verify plugin artifact (no npm publishing)
+        run: |
+          mkdir -p dist
+          npm pack --pack-destination dist
+          test -f dist/dsh-deeplink-0.1.2.tgz
+          tar -xOf dist/dsh-deeplink-0.1.2.tgz package/package.json > "$RUNNER_TEMP/packed-plugin.json"
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            import assert from "node:assert/strict";
+            const manifest = JSON.parse(readFileSync(process.env.RUNNER_TEMP + "/packed-plugin.json", "utf8"));
+            assert.equal(manifest.name, "dsh-deeplink");
+            assert.equal(manifest.version, "0.1.2");
+          '
+          sha256sum dist/dsh-deeplink-0.1.2.tgz
+      - name: Upload verified plugin package
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: plugin-v0.1.2
+          path: dist/dsh-deeplink-0.1.2.tgz
+          if-no-files-found: error
+
+  tag:
+    needs: verify
+    if: github.repository == 'roccowong95/dsh-deeplink' && github.ref == 'refs/heads/release/v0.1.2'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      # No checkout or project scripts in this write-scoped job.
+      - name: Create only the authorized v0.1.2 tag, never move an existing tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: roccowong95/dsh-deeplink
+          TARGET: 99bd398906946e2bdc62814e751aa33ee9cf9d20
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq '.object.sha')" = "$TARGET"
+          existing=$(gh api "repos/$GH_REPO/git/matching-refs/tags/v0.1.2" \
+            --jq '.[] | select(.ref == "refs/tags/v0.1.2") | .object | [.type, .sha] | @tsv')
+          if [[ -n "$existing" ]]; then
+            read -r type sha <<< "$existing"
+            # Accept an existing lightweight or annotated tag only at this commit.
+            for _ in {1..10}; do
+              if [[ "$type" == commit ]]; then
+                test "$sha" = "$TARGET"
+                echo 'v0.1.2 already points to the verified commit; no change made.'
+                exit 0
+              fi
+              test "$type" = tag
+              object=$(gh api "repos/$GH_REPO/git/tags/$sha" --jq '.object | [.type, .sha] | @tsv')
+              read -r type sha <<< "$object"
+            done
+            echo 'Cannot resolve existing tag safely; refusing to change it.' >&2
+            exit 1
+          fi
+          # Recheck main immediately before creating the fixed-SHA ref.
+          test "$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq '.object.sha')" = "$TARGET"
+          # POST only: a concurrent existing tag causes failure, never replacement.
+          gh api --method POST "repos/$GH_REPO/git/refs" \
+            -f ref=refs/tags/v0.1.2 -f sha="$TARGET"
+          test "$(gh api "repos/$GH_REPO/git/ref/tags/v0.1.2" --jq '.object.sha')" = "$TARGET"
+          echo 'Created v0.1.2 at the verified commit. No GitHub Release or npm publish.'
