@@ -35,7 +35,10 @@ jobs:
       - name: Test Swift URL parser and identity authentication
         run: bash macos/test.sh
       - name: Build and verify ad-hoc universal package
-        run: bash macos/release.sh universal
+        run: |
+          bash macos/release.sh universal
+          APP='macos/build/universal/DSH Deeplink.app'
+          lipo "$APP/Contents/MacOS/DSHDeeplink" -verify_arch arm64 x86_64
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: companion-check-${{ github.sha }}

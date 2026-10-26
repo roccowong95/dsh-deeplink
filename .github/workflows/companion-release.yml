@@ -38,7 +38,7 @@ jobs:
           APP='macos/build/universal/DSH Deeplink.app'
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")" = "$COMPANION_VERSION"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Contents/Info.plist")" = "$COMPANION_VERSION"
-          lipo -verify_arch arm64 x86_64 "$APP/Contents/MacOS/DSHDeeplink"
+          lipo "$APP/Contents/MacOS/DSHDeeplink" -verify_arch arm64 x86_64
           codesign --verify --strict "$APP"
           cd macos/build
           shasum -a 256 -c "DSH-Deeplink-$COMPANION_VERSION-universal-adhoc.zip.sha256"
