@@ -56,3 +56,34 @@ The existing cloud preview profile was changed from the local `link:` checkout t
 - With **New Session** active, copying the original row displayed **Deeplink 已复制** and put exactly `dsh-link://session/session-cloud-tree-main` on the clipboard, without changing the selected session.
 
 For intentional `link:` development installs, run `npm ci && npm run build` inside the linked checkout before restarting the Host. The recovery CLI commands require an installed DSH CLI and an already initialized Desktop profile; the plugin UI is the alternative when the CLI is unavailable.
+
+## Current-session shortcut (cloud development)
+
+- Register `dsh-deeplink.copy-current-session` through the official shortcut service. Only `desktop:macos` defaults to Cmd+Shift+C; Linux Ctrl+Shift+C remains reserved. No independent keydown listener, recorder, preference file, or native accelerator is installed.
+- Official rc.2 recorder is internal, so the user-approved fallback is a read-only effective-keycap widget inside `plugins.bundle.config` for `dsh-deeplink`. The command also participates in the official global shortcut editor.
+- Automated `npm test`: 31 passing, including current-vs-row targeting, blocked contexts, effective-menu catalog rebinding, detail widget states, disposal and no browser polling.
+- Official protocol verification: two additional tests run as part of `npm test` against the pinned rc.2 development dependency. Covers accepted Mac default, overlapping default rejection, Linux copy reservation, accepted rebind, persistence across owner reload, stale/conflicting edits, failed storage writes, clear and reset. Uses a memory storage adapter, not user preferences.
+
+### UI acceptance
+
+1. Click dsh-deeplink in the official plugin list. Confirm the widget appears on its detail page, wraps at narrow widths and displays the effective binding (initially Unbound on Linux).
+2. In the official global shortcut editor, bind the command to an accepted nonreserved test combination. Verify detail and session menu update immediately and after reload. Cancel recording and try a conflicting binding; accepted keys must not change.
+3. View session A and open session B’s row menu. Clicking the row action copies B; dismissing the menu and pressing the shortcut copies A. Both links omit `instance` and no session is changed.
+4. Repeat with composer focus; no prompt is sent. Global pages, blank/no session, archived and subagent targets are blocked. Disable/re-enable the plugin without duplicate commands or contributions.
+5. Check Chinese and English menu labels at ordinary/narrow widths with a long accepted binding; retain official static ellipsis behavior, not marquee. Restore or clear the temporary test binding.
+
+Cloud Linux tests do not constitute native macOS physical keyboard or clipboard acceptance; do not claim otherwise. Cloud browser QA completed after explicit user permission for a bounded retry of the initial approval-service metadata failure. The checks below were performed by the parent task on the cloud computer.
+
+- `npm run test:install`: passed using a writable cloud npm cache; confirms the packed plugin remains isolated from dev dependencies and activates through a separate Host runtime.
+
+### Shortcut cloud UI verification — 2026-10-26
+
+Environment: official rc.2 cloud Web UI, Linux Chromium. No user Mac access.
+
+- Official plugin list → dsh-deeplink detail displayed the read-only widget, initially **未绑定**, as expected on Linux.
+- Settings → General → Keyboard shortcuts included **复制当前会话 Deeplink**. The official browser recorder rejected unsupported Alt+J and accepted **Ctrl+Shift+Period** under its own key restrictions. The detail widget updated immediately.
+- A real shortcut keypress copied exactly `dsh-link://session/session-cloud-tree-main`, with no `instance` query. It still worked after page reload, confirming accepted preference persistence. On **New Session**, the same keypress left a sentinel clipboard value unchanged.
+- The session menu displayed the effective **Ctrl+Shift+Period** binding at the right. At a 1188px viewport the complete Chinese label measured 80px with `scrollWidth` 80px; the shortcut was 48px with a 6px gap, without overlap or truncation. Official static ellipsis styling is retained; no marquee was introduced.
+- Starting a new recording and pressing Escape preserved the accepted binding. Restoring this command’s default cleared the Linux binding; the detail immediately returned to **未绑定**. Closing settings left no stale modal.
+
+Native macOS Cmd+Shift+C dispatch was not physically tested: the macOS default is covered by official protocol validation only. Other viewport/language combinations remain covered by the official responsive menu primitives rather than separate pixel acceptance in this pass.

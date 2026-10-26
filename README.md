@@ -8,6 +8,12 @@ dsh-link://session/SESSION_ID
 
 Choose **复制 Deeplink / Copy Deeplink** next to **Copy Session ID** in a session's `…` menu. It copies that row's `dsh-link://session/SESSION_ID` (never an instance query), without opening or modifying the session. Clipboard success or failure appears in a toast; failures can be retried from the menu. The copy action is available in Web and Desktop; opening links requires the macOS companion.
 
+### Keyboard shortcut
+
+On **macOS Desktop**, **⌘⇧C (Cmd+Shift+C)** copies the **currently viewed conversation**. The session-row menu still copies that row, even when a different conversation is open. Neither action adds an `instance` query. With no eligible conversation visible (including settings/global panels), the shortcut does nothing.
+
+Click **dsh-deeplink** in the official plugin list to see its effective shortcut. This detail widget is read-only: the official recorder is not exposed as a reusable plugin component. To rebind, clear, or restore the default, use **Settings → General → Keyboard shortcuts** and find **Copy Current Session Deeplink**. Changes use DSH’s own persistence and conflict handling; the menu and plugin detail update with the accepted binding. Other platforms start unbound to preserve browser/editor/terminal shortcuts.
+
 For manually constructed links, optional `?instance=UUID` selects a specific running plugin instance; otherwise the companion asks when several instances are available.
 
 ## Setup
