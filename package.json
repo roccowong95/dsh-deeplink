@@ -19,7 +19,8 @@
   "scripts": {
     "build": "node scripts/build-client.mjs",
     "test": "npm run build && node --test test/*.test.mjs",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "test:install": "node --test test/install/*.test.mjs"
   },
   "dsh": {
     "bundle": {

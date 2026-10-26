@@ -13,10 +13,21 @@ For manually constructed links, optional `?instance=UUID` selects a specific run
 ## Setup
 
 1. Build/install the companion using [macOS instructions](macos/README.md). First use asks you to select your DSH.app.
-2. Build the plugin with `npm ci && npm run build`; install this package into the **Desktop profile** using DSH's plugin installer and restart Desktop. This repository does not edit your profile automatically.
+2. In Desktop’s plugin installer, install `github:roccowong95/dsh-deeplink` into the **Desktop profile**, then fully quit and reopen Desktop. The GitHub package includes the built client; no local checkout or `npm ci` is needed for normal installation. This repository does not edit your profile automatically.
 3. Open a link. The status-bar menu shows the outcome; **Quit** closes only the companion, never DSH. An already accepted request may still finish.
 
 Compatibility target: DSH **0.2.1-rc.2**, Node ≥22.19.0. This first version uses the official Remote gateway's source-mode support; future API changes may require updates. Real Desktop acceptance testing is required before calling a release verified.
+
+### Recover an old local installation
+
+If `ERR_MODULE_NOT_FOUND` mentions a local checkout, **fully quit and reopen Desktop** first. If it still fails, quit Desktop and reinstall only this plugin:
+
+```sh
+dsh plugin --profile desktop remove dsh-deeplink
+dsh plugin --profile desktop add github:roccowong95/dsh-deeplink
+```
+
+Reopen Desktop and enable the plugin. You can also uninstall/reinstall through Desktop’s plugin UI, then fully quit/reopen. Keep your existing profile and sessions; do not delete them. See [installation verification](docs/testing.md#installation-recovery-verification--2026-10-26-cloud-only) for details.
 
 ## Limits and safety
 
@@ -32,7 +43,8 @@ Compatibility target: DSH **0.2.1-rc.2**, Node ≥22.19.0. This first version us
 
 ```sh
 npm ci
-npm test                 # loopback + official Gateway + navigation + session-menu tests
+npm test                 # loopback + Gateway + navigation + menu + link-recovery tests
+npm run test:install     # opt-in online packed production install + independent Host test
 bash macos/test.sh       # macOS only
 bash macos/build.sh      # macOS only
 ```
