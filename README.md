@@ -6,7 +6,9 @@ Open an existing conversation in **official DSH Desktop**, using a tiny native m
 dsh-link://session/SESSION_ID
 ```
 
-Copy the session ID from DSH's conversation menu. Optional `?instance=UUID` selects a specific running plugin instance; otherwise the companion asks when several instances are available.
+Choose **复制 Deeplink / Copy Deeplink** next to **Copy Session ID** in a session's `…` menu. It copies that row's `dsh-link://session/SESSION_ID` (never an instance query), without opening or modifying the session. Clipboard success or failure appears in a toast; failures can be retried from the menu. The copy action is available in Web and Desktop; opening links requires the macOS companion.
+
+For manually constructed links, optional `?instance=UUID` selects a specific running plugin instance; otherwise the companion asks when several instances are available.
 
 ## Setup
 
@@ -30,7 +32,7 @@ Compatibility target: DSH **0.2.1-rc.2**, Node ≥22.19.0. This first version us
 
 ```sh
 npm ci
-npm test                 # real loopback + official DSH Gateway + navigation tests
+npm test                 # loopback + official Gateway + navigation + session-menu tests
 bash macos/test.sh       # macOS only
 bash macos/build.sh      # macOS only
 ```
