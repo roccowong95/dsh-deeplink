@@ -44,3 +44,9 @@ No login startup, background updater, analytics or access to chat content. This 
 7. Downloaded ad-hoc ZIP: record Gatekeeper result honestly; don't remove quarantine or claim notarization. Check architecture on Apple silicon/Intel if claiming both.
 
 Cloud source review is not a macOS compile or end-to-end pass; native build/UI checks must run on macOS.
+
+### Release CI and versioning
+
+Push a stable `companion-vMAJOR.MINOR.PATCH` tag to run the dedicated companion release workflow. It publishes a universal ZIP and SHA-256 checksum after Swift tests, bundle-version checks, architecture checks, and ad-hoc signature verification. The tag supplies `CFBundleShortVersionString`, `CFBundleVersion`, and the ZIP version. Local/check builds default to `macos/VERSION`; an explicit version can be passed as the second argument, e.g. `bash macos/release.sh universal 0.1.0`. `Info.plist` is a build template, not a ready-to-install bundle plist.
+
+Plugin `v*` tags do not build or release this app. See the root README for the independent plugin release procedure.

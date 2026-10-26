@@ -2,10 +2,11 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 ARCH=${1:-arm64}
-./build.sh "$ARCH"
+VERSION=$(bash ./version.sh "${2:-}")
+bash ./build.sh "$ARCH" "$VERSION"
 APP="$PWD/build/$ARCH/DSH Deeplink.app"
-ZIP="$PWD/build/DSH-Deeplink-0.1.0-$ARCH-adhoc.zip"
+ZIP="$PWD/build/DSH-Deeplink-$VERSION-$ARCH-adhoc.zip"
 codesign --verify --strict "$APP"
 ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
-shasum -a 256 "$ZIP" > "$ZIP.sha256"
+(cd "$(dirname "$ZIP")" && shasum -a 256 "$(basename "$ZIP")" > "$(basename "$ZIP").sha256")
 printf 'Release: %s\nAd-hoc signed; NOT notarized. Gatekeeper may block it.\n' "$ZIP"

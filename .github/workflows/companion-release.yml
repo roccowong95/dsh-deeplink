@@ -1,0 +1,73 @@
+name: Companion release
+
+on:
+  push:
+    tags: ['companion-v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: companion-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Validate tag and derive companion version
+        id: version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          VERSION=$(node scripts/release-version.mjs companion "$RELEASE_TAG")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - run: bash macos/test.sh
+      - name: Build universal ad-hoc ZIP with tag version
+        env:
+          COMPANION_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          bash macos/release.sh universal "$COMPANION_VERSION"
+          APP='macos/build/universal/DSH Deeplink.app'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")" = "$COMPANION_VERSION"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Contents/Info.plist")" = "$COMPANION_VERSION"
+          lipo -verify_arch arm64 x86_64 "$APP/Contents/MacOS/DSHDeeplink"
+          codesign --verify --strict "$APP"
+          cd macos/build
+          shasum -a 256 -c "DSH-Deeplink-$COMPANION_VERSION-universal-adhoc.zip.sha256"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: companion-release
+          path: |
+            macos/build/DSH-Deeplink-*-universal-adhoc.zip
+            macos/build/DSH-Deeplink-*-universal-adhoc.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: companion-release
+          path: release
+      - name: Publish companion assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" release/*.zip release/*.sha256 \
+            --verify-tag --latest=false --title "DSH Deeplink Companion $RELEASE_TAG" \
+            --notes 'Universal macOS companion (Apple silicon + Intel), ad-hoc signed. Not Apple-notarized; Gatekeeper may block downloaded apps. SHA-256 checksum included. This does not update the DSH plugin.'

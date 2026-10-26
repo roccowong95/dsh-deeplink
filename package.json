@@ -1,6 +1,6 @@
 {
   "name": "dsh-deeplink",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "type": "module",
   "description": "Navigation-only deep links for official DSH Desktop with a tiny macOS companion.",
   "main": "lib/index.js",

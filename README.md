@@ -56,3 +56,13 @@ bash macos/build.sh      # macOS only
 ```
 
 [Protocol](docs/protocol.md) · [Desktop test checklist](docs/testing.md)
+
+## Independent releases
+
+The **plugin version shown in DSH comes from its installed `package.json`**, not the GitHub tag or companion app. Plugin and companion have independent version numbers. Creating a tag alone does not change DSH's displayed version; install/update the corresponding plugin package and restart DSH. A bare `github:roccowong95/dsh-deeplink` installs the default branch, not the latest GitHub Release. For a pinned plugin release use `github:roccowong95/dsh-deeplink#v0.1.2` once that tag is published. DSH rc2's third-party GitHub install does not automatically discover new GitHub releases.
+
+- **Plugin:** bump `package.json` and `package-lock.json` together (for example, `npm version 0.1.2 --no-git-tag-version`), run `npm test` and `npm run test:install`, commit the generated client and merge. Then a maintainer tags that commit `v0.1.2` and pushes the tag. Linux CI rejects a tag that does not exactly match both manifests, tests the package, and uploads a `.tgz` workflow artifact. No npm publishing or Apple build is triggered by a `v*` tag.
+- **Companion:** a maintainer tags the desired commit `companion-v0.1.0` and pushes it. Its dedicated release workflow validates a stable `MAJOR.MINOR.PATCH` version, runs Swift tests, builds a universal ad-hoc signed app, and publishes a GitHub Release with ZIP and portable SHA-256 checksum. The tag determines both app bundle version fields and filename; it never changes the plugin manifest. No Apple credentials or notarization are required. Companion releases are not marked as the repository's latest release. Existing release tags/assets are not silently overwritten on a rerun.
+- **Normal checks:** plugin checks run on branch pushes and PRs on Linux. Swift tests and the universal build run on macOS only for companion/build-workflow changes (or manual dispatch). `macos/VERSION` supplies the independent local/check build version; release tags override it.
+
+To verify a downloaded companion archive, keep its `.sha256` file beside it and run `shasum -a 256 -c DSH-Deeplink-0.1.0-universal-adhoc.zip.sha256`. Integrity checks do not imply Apple notarization or a trusted publisher signature.

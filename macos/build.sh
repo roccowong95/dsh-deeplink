@@ -4,10 +4,12 @@ cd "$(dirname "$0")"
 [[ $(uname -s) == Darwin ]] || { echo 'Requires macOS and Xcode Command Line Tools.' >&2; exit 1; }
 ARCH=${1:-arm64}
 [[ "$ARCH" == arm64 || "$ARCH" == x86_64 || "$ARCH" == universal ]] || { echo 'Usage: build.sh [arm64|x86_64|universal]' >&2; exit 1; }
+VERSION=$(bash ./version.sh "${2:-}")
 OUT="$PWD/build/$ARCH"
 APP="$OUT/DSH Deeplink.app"
 mkdir -p "$APP/Contents/MacOS"
-cp Info.plist "$APP/Contents/Info.plist"
+sed "s/__COMPANION_VERSION__/$VERSION/g" Info.plist > "$APP/Contents/Info.plist"
+plutil -lint "$APP/Contents/Info.plist"
 SDK=$(xcrun --sdk macosx --show-sdk-path)
 compile() { xcrun swiftc -O -parse-as-library -swift-version 5 -sdk "$SDK" -target "$1-apple-macos12.0" -framework AppKit -framework CryptoKit Sources/Protocol.swift Sources/main.swift -o "$OUT/DSHDeeplink-$1"; }
 if [[ "$ARCH" == universal ]]; then
